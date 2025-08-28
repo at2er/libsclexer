@@ -23,11 +23,11 @@ enum PARSE_ARG_RESULT {
 };
 
 static int cmd_print(int argc, struct lisp_val argv[]);
-static int parse_sym(struct sclexer_tok *tok, struct sclexer_context *con);
-static int parse_sexpr(struct sclexer_context *con);
-static int parse_sexpr_arg(struct lisp_val *res, struct sclexer_context *con);
-static int parse_sexpr_arg_str(struct lisp_val *res, struct sclexer_context *con);
-static int process(struct sclexer_context *con);
+static int parse_sym(struct sclexer_tok *tok, struct sclexer *lexer);
+static int parse_sexpr(struct sclexer *lexer);
+static int parse_sexpr_arg(struct lisp_val *res, struct sclexer *lexer);
+static int parse_sexpr_arg_str(struct lisp_val *res, struct sclexer *lexer);
+static int process(struct sclexer *lexer);
 
 int cmd_print(int argc, struct lisp_val argv[])
 {
@@ -36,29 +36,29 @@ int cmd_print(int argc, struct lisp_val argv[])
 	return 0;
 }
 
-int parse_sym(struct sclexer_tok *tok, struct sclexer_context *con)
+int parse_sym(struct sclexer_tok *tok, struct sclexer *lexer)
 {
 	if (tok->kind_data.c == ';') {
 		return 0;
 	} else if (tok->kind_data.c == '(') {
-		return parse_sexpr(con);
+		return parse_sexpr(lexer);
 	}
 	return 1;
 }
 
-int parse_sexpr(struct sclexer_context *con)
+int parse_sexpr(struct sclexer *lexer)
 {
 	char *cmd = NULL;
 	struct sclexer_tok first;
 	int ret = 0, argc = 0;
 	struct lisp_val argv[8];
-	if (sclexer_read_tok(&first, con))
+	if (sclexer_read_tok(&first, lexer))
 		return 1;
 	if (first.kind == SCLEXER_TOK_KIND_STR) {
 		cmd = calloc(first.kind_data.str.len + 1, sizeof(char));
 		strncpy(cmd, first.kind_data.str.s, first.kind_data.str.len);
 	}
-	while ((ret = parse_sexpr_arg(&argv[argc], con))
+	while ((ret = parse_sexpr_arg(&argv[argc], lexer))
 			!= PARSE_ARG_RESULT_END) {
 		if (ret == PARSE_ARG_RESULT_FAULT)
 			return 1;
@@ -91,14 +91,14 @@ int parse_sexpr(struct sclexer_context *con)
 	return 0;
 }
 
-int parse_sexpr_arg(struct lisp_val *res, struct sclexer_context *con)
+int parse_sexpr_arg(struct lisp_val *res, struct sclexer *lexer)
 {
 	struct sclexer_tok tok;
-	if (sclexer_read_tok(&tok, con))
+	if (sclexer_read_tok(&tok, lexer))
 		return 1;
 	switch (tok.kind) {
 	case SCLEXER_TOK_KIND_EMPTY:
-		if (sclexer_get_line(con))
+		if (sclexer_get_line(lexer))
 			return PARSE_ARG_RESULT_FAULT;
 	case SCLEXER_TOK_KIND_SPACE:
 		return PARSE_ARG_RESULT_CONTINUE;
@@ -115,17 +115,17 @@ int parse_sexpr_arg(struct lisp_val *res, struct sclexer_context *con)
 		if (tok.kind_data.c == ')')
 			return PARSE_ARG_RESULT_END;
 		if (tok.kind_data.c == '"')
-			return parse_sexpr_arg_str(res, con);
+			return parse_sexpr_arg_str(res, lexer);
 		break;
 	default: return PARSE_ARG_RESULT_FAULT; break;
 	}
 	return PARSE_ARG_RESULT_CONTINUE_WITH_ARG;
 }
 
-int parse_sexpr_arg_str(struct lisp_val *res, struct sclexer_context *con)
+int parse_sexpr_arg_str(struct lisp_val *res, struct sclexer *lexer)
 {
 	struct sclexer_str_slice slice;
-	if (sclexer_read_to(&slice, con, "\""))
+	if (sclexer_read_to(&slice, lexer, "\""))
 		return PARSE_ARG_RESULT_FAULT;
 	res->type = LISP_VAL_TYPE_STR;
 	res->data.str = calloc(slice.len, sizeof(char));
@@ -133,17 +133,17 @@ int parse_sexpr_arg_str(struct lisp_val *res, struct sclexer_context *con)
 	return PARSE_ARG_RESULT_CONTINUE_WITH_ARG;
 }
 
-int process(struct sclexer_context *con)
+int process(struct sclexer *lexer)
 {
 	struct sclexer_tok tok;
-	if (sclexer_read_tok(&tok, con))
+	if (sclexer_read_tok(&tok, lexer))
 		return 1;
 	switch (tok.kind) {
 	case SCLEXER_TOK_KIND_EMPTY:
 	case SCLEXER_TOK_KIND_SPACE:
 		break;
 	case SCLEXER_TOK_KIND_SYM:
-		return parse_sym(&tok, con);
+		return parse_sym(&tok, lexer);
 	default: return 1; break;
 	}
 	return 0;
@@ -151,20 +151,20 @@ int process(struct sclexer_context *con)
 
 int main(int argc, char *argv[])
 {
-	struct sclexer_context con;
+	struct sclexer lexer;
 	int ret = 0;
 	if (argc < 2)
 		return 1;
-	if (sclexer_init(argv[1], &con))
+	if (sclexer_init(argv[1], &lexer))
 		return 1;
 
-	while (!sclexer_get_line(&con)) {
-		if ((ret = process(&con)) > 0)
+	while (!sclexer_get_line(&lexer)) {
+		if ((ret = process(&lexer)) > 0)
 			return 1;
 		if (ret == -1)
 			break;
 	}
 
-	sclexer_end(&con);
+	sclexer_end(&lexer);
 	return 0;
 }

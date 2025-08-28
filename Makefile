@@ -18,7 +18,7 @@ debug: all main.c
 	$(CC) -o sclexer main.c -g $(CFLAGS) -L. -lsclexer
 
 %.o: %.c
-	$(CC) -g $(CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) -c $< -o $@
 
 $(TARGET): $(OBJ)
 	$(AR) -rcs $@ $(OBJ)

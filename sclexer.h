@@ -18,7 +18,7 @@ enum SCLEXER_TOK_KIND {
 	SCLEXER_TOK_KIND_SYM
 };
 
-struct sclexer_context {
+struct sclexer {
 	char buf[BUFSIZ], *cur;
 	FILE *fp;
 	const char *fpath;
@@ -48,22 +48,21 @@ struct sclexer_tok {
 	union sclexer_tok_kind_data kind_data;
 };
 
-extern void sclexer_end(struct sclexer_context *context);
+extern void sclexer_end(struct sclexer *lexer);
 /**
  * @return:
  *   0: no problem
  *   1: EOF
  */
-extern int sclexer_get_line(struct sclexer_context *context);
-extern int sclexer_init(const char *fpath, struct sclexer_context *context);
+extern int sclexer_get_line(struct sclexer *lexer);
+extern int sclexer_init(const char *fpath, struct sclexer *lexer);
 extern int sclexer_read_to(struct sclexer_str_slice *result,
-		struct sclexer_context *context,
+		struct sclexer *lexer,
 		const char *s);
-extern int sclexer_read_tok(struct sclexer_tok *result,
-		struct sclexer_context *context);
+extern int sclexer_read_tok(struct sclexer_tok *result, struct sclexer *lexer);
 extern int sclexer_read_while(struct sclexer_str_slice *result,
-		struct sclexer_context *context,
+		struct sclexer *lexer,
 		int (*cond)(struct sclexer_str_slice *cur,
-			struct sclexer_context *context));
+			struct sclexer *lexer));
 
 #endif
