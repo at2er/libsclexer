@@ -38,9 +38,9 @@ int cmd_print(int argc, struct lisp_val argv[])
 
 int parse_sym(struct sclexer_tok *tok, struct sclexer *lexer)
 {
-	if (tok->kind_data.c == ';') {
+	if (tok->type_data.c == ';') {
 		return 0;
-	} else if (tok->kind_data.c == '(') {
+	} else if (tok->type_data.c == '(') {
 		return parse_sexpr(lexer);
 	}
 	return 1;
