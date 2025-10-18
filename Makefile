@@ -1,7 +1,10 @@
 CC = gcc
-CFLAGS = -std=c99 -pedantic -Wall -Wextra
+CFLAGS = -std=c99 -pedantic -Wall -Wextra $(FEATURES)
 AR = ar
 PREFIX = /usr/local
+
+# see `sclexer.c` for more
+FEATURES = -DENABLE_MSG_COLOR
 
 HEADER_DIR = $(PREFIX)/include
 TARGET_DIR = $(PREFIX)/lib

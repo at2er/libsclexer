@@ -12,6 +12,29 @@
 #define ERR_FMT "libsclexer: %s:%s:%d: "
 #define ERR_FMT_ARG __FILE__, __func__, __LINE__
 
+//#define ENABLE_MSG_COLOR
+#ifdef ENABLE_MSG_COLOR
+#define MSG_COLOR(MSG, COLOR) COLOR MSG MSG_COLOR_RESET
+#define MSG_COLOR_LOC(MSG) MSG_COLOR(MSG, "\x1b[31m")
+#define MSG_COLOR_RESET "\x1b[0m"
+#else
+#define MSG_COLOR(MSG, ...) MSG
+#define MSG_COLOR_LOC(MSG) MSG
+#define MSG_COLOR_RESET
+#endif // ENABLE_MSG_COLOR
+
+//#define ENABLE_MORE_LOC_MSG
+#ifdef ENABLE_MORE_LOC_MSG
+#define TOK_LOC_FMT MSG_COLOR_LOC("f:%s,l:%lu,c:%lu")
+#define TOK_LOC_UNWRAP(TOK) (TOK)->loc.fpath, (TOK)->loc.line, (TOK)->loc.column
+#else
+#define TOK_LOC_FMT MSG_COLOR_LOC("l:%lu,c:%lu")
+#define TOK_LOC_UNWRAP(TOK) (TOK)->loc.line, (TOK)->loc.column
+#endif // ENABLE_MORE_LOC_MSG
+
+#define TOK_KIND_FMT MSG_COLOR("%s", "\x1b[32m")
+#define TOK_KIND_FMT_ARG(TOK) kind_names[(TOK)->kind]
+
 /* For public functions from `sclexer.h` */
 #define check(E) \
 	if (!(E)) { \
@@ -57,6 +80,9 @@ static size_t cmp_src_with_cstr(const char *cur, const char *cstr);
 static size_t do_ident(struct sclexer *self, struct sclexer_tok *tok);
 static void drop_space(struct sclexer *self);
 static size_t drop_until_endl(struct sclexer *self);
+static bool is_prev_eol(struct sclexer_tok *tokens,
+		struct sclexer_tok *cur_tok,
+		size_t count);
 static void next_line(struct sclexer *self);
 static size_t try_comment(struct sclexer *self);
 static size_t try_digit(struct sclexer *self, struct sclexer_tok *tok);
@@ -133,6 +159,19 @@ size_t drop_until_endl(struct sclexer *self)
 			return readed + 1;
 	}
 	return 0;
+}
+
+bool is_prev_eol(struct sclexer_tok *tokens,
+		struct sclexer_tok *cur_tok,
+		size_t count)
+{
+	if (count == 0)
+		return false;
+	if (cur_tok->kind != SCLEXER_EOL)
+		return false;
+	if (tokens[count - 1].kind != SCLEXER_EOL)
+		return false;
+	return true;
 }
 
 void next_line(struct sclexer *self)
@@ -352,10 +391,60 @@ size_t sclexer_get_tokens(struct sclexer *self, struct sclexer_tok **result)
 	struct sclexer_tok cur_tok = {0};
 	struct sclexer_tok *tokens = NULL;
 	tokens = ereallocz(tokens, sizeof(*tokens) * capacity);
-	for (; sclexer_get_tok(self, &cur_tok); count++)
+	for (; sclexer_get_tok(self, &cur_tok); count++) {
+		if (is_prev_eol(tokens, &cur_tok, count)) {
+			count--;
+			continue;
+		}
 		sclexer_dup_tok(&tokens[count], &cur_tok);
+	}
 	*result = tokens;
 	return count;
+}
+
+/* shits, is's cannot be readed. */
+void sclexer_print_tok(struct sclexer *self, struct sclexer_tok *tok)
+{
+	switch (tok->kind) {
+	case SCLEXER_IDENT:
+	case SCLEXER_STRING:
+		printf(TOK_KIND_FMT"(len=%lu, '%.*s', "TOK_LOC_FMT")\n",
+				TOK_KIND_FMT_ARG(tok),
+				tok->data.str.len,
+				(int)tok->data.str.len,
+				tok->data.str.begin,
+				TOK_LOC_UNWRAP(tok));
+		break;
+	case SCLEXER_INT:
+		printf(TOK_KIND_FMT"(%lu, "TOK_LOC_FMT")\n",
+				TOK_KIND_FMT_ARG(tok),
+				tok->data.uint,
+				TOK_LOC_UNWRAP(tok));
+		break;
+	case SCLEXER_INT_NEG:
+		printf(TOK_KIND_FMT"(%ld, "TOK_LOC_FMT")\n",
+				TOK_KIND_FMT_ARG(tok),
+				tok->data.sint,
+				TOK_LOC_UNWRAP(tok));
+		break;
+	case SCLEXER_KEYWORD:
+		printf(TOK_KIND_FMT"('%s', "TOK_LOC_FMT")\n",
+				TOK_KIND_FMT_ARG(tok),
+				self->keywords[tok->data.keyword],
+				TOK_LOC_UNWRAP(tok));
+		break;
+	case SCLEXER_SYMBOL:
+		printf(TOK_KIND_FMT"('%s', "TOK_LOC_FMT")\n",
+				TOK_KIND_FMT_ARG(tok),
+				self->symbols[tok->data.symbol],
+				TOK_LOC_UNWRAP(tok));
+		break;
+	default:
+		printf(TOK_KIND_FMT"("TOK_LOC_FMT")\n",
+				TOK_KIND_FMT_ARG(tok),
+				TOK_LOC_UNWRAP(tok));
+		break;
+	}
 }
 
 size_t sclexer_read_file(char **result, const char *fpath)

@@ -93,6 +93,9 @@ const char *sclexer_kind_names(enum SCLEXER_TOK_KIND kind);
 
 size_t sclexer_get_tokens(struct sclexer *self, struct sclexer_tok **result);
 
+//TODO
+void sclexer_print_tok(struct sclexer *self, struct sclexer_tok *tok);
+
 /**
  * @param result: store the file content, you need free by yourself.
  */
