@@ -301,6 +301,8 @@ bool sclexer_default_is_ident(char c, bool begin)
 {
 	if (begin && isdigit(c))
 		return false;
+	if (c == '_')
+		return true;
 	if (isalnum(c))
 		return true;
 	return false;
@@ -351,7 +353,10 @@ bool sclexer_get_tok(struct sclexer *self,
 		try_keyword(self, tok);
 		goto end;
 	}
-	eprintf(ERR_FMT"unknown token '%c'\n", ERR_FMT_ARG, self->_cur[0]);
+	eprintf(ERR_FMT"unknown token '%c' "TOK_LOC_FMT"\n",
+			ERR_FMT_ARG,
+			self->_cur[0],
+			TOK_LOC_UNWRAP(tok));
 	return false;
 end:
 	advance(self, readed);
@@ -395,6 +400,10 @@ size_t sclexer_get_tokens(struct sclexer *self, struct sclexer_tok **result)
 		if (is_prev_eol(tokens, &cur_tok, count)) {
 			count--;
 			continue;
+		}
+		if (count == capacity) {
+			capacity += DEFAULT_TOKENS_CAPACITY;
+			tokens = ereallocz(tokens, sizeof(*tokens) * capacity);
 		}
 		sclexer_dup_tok(&tokens[count], &cur_tok);
 	}

@@ -4,4 +4,4 @@
 ; Comment
 
 (print
-	"hello world!")
+	"hello world!" hello world)
