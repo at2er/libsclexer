@@ -71,7 +71,7 @@ struct sclexer {
 
 	bool _after_endl;
 	const char *_cur;
-	size_t _last_ident;
+	size_t _last_indent;
 	struct sclexer_loc _loc;
 };
 

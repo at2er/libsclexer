@@ -4,6 +4,7 @@
 #include "sclexer.h"
 #include <ctype.h>
 #include <stdarg.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -77,6 +78,7 @@ static void advance(struct sclexer *self, size_t readed);
  * @return: 0 on compare failed, otherwise compared string length.
  */
 static size_t cmp_src_with_cstr(const char *cur, const char *cstr);
+static bool do_eof(struct sclexer *self, struct sclexer_tok *tok);
 static size_t do_ident(struct sclexer *self, struct sclexer_tok *tok);
 static void drop_space(struct sclexer *self);
 static size_t drop_until_endl(struct sclexer *self);
@@ -121,6 +123,17 @@ size_t cmp_src_with_cstr(const char *cur, const char *cstr)
 			return 0;
 	}
 	return i;
+}
+
+bool do_eof(struct sclexer *self, struct sclexer_tok *tok)
+{
+	if (self->_last_indent) {
+		tok->kind = SCLEXER_INDENT_BLOCK_END;
+		self->_last_indent--;
+		return true;
+	}
+	tok->kind = SCLEXER_EOF;
+	return false;
 }
 
 size_t do_ident(struct sclexer *self, struct sclexer_tok *tok)
@@ -235,14 +248,15 @@ bool try_indent(struct sclexer *self, struct sclexer_tok *tok)
 		return false;
 	while (self->_cur[readed] == '\t')
 		readed++;
-	if (readed > self->_last_ident) {
+	if (readed > self->_last_indent) {
 		tok->kind = SCLEXER_INDENT_BLOCK_BEGIN;
-	} else if (readed < self->_last_ident) {
+		self->_last_indent++;
+	} else if (readed < self->_last_indent) {
 		tok->kind = SCLEXER_INDENT_BLOCK_END;
+		self->_last_indent--;
 	} else {
 		return false;
 	}
-	self->_last_ident = readed;
 	return true;
 }
 
@@ -329,14 +343,21 @@ bool sclexer_get_tok(struct sclexer *self,
 		self->_after_endl = false;
 		return true;
 	}
+
+	if (self->_cur[0] == '\0') {
+		if (!self->_after_endl) {
+			tok->kind = SCLEXER_EOL;
+			self->_after_endl = true;
+			return true;
+		}
+		return false;
+	}
 	if (self->_after_endl)
 		self->_after_endl = false;
 
 	drop_space(self);
-	if (self->_cur[0] == '\0') {
-		tok->kind = SCLEXER_EOF;
-		return false;
-	}
+	if (self->_cur[0] == '\0')
+		return do_eof(self, tok);
 
 	tok->src.begin = self->_cur;
 	tok->loc = self->_loc;
@@ -377,7 +398,7 @@ void sclexer_init(struct sclexer *self, const char *fpath)
 	if (!self->is_ident)
 		self->is_ident = sclexer_default_is_ident;
 	self->_cur = self->src;
-	self->_last_ident = 0;
+	self->_last_indent = 0;
 	self->_loc.fpath  = fpath;
 	self->_loc.line   = 1;
 	self->_loc.column = 1;
