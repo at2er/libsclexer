@@ -29,7 +29,7 @@ $(TARGET): $(OBJ)
 clean:
 	rm -f $(OBJ) $(TARGET) sclexer
 
-install:
+install: all
 	mkdir -p $(HEADER_DIR) $(TARGET_DIR)
 	cp -f $(HEADER) $(HEADER_DIR)/$(HEADER)
 	cp -f $(TARGET) $(TARGET_DIR)/$(TARGET)

@@ -1,5 +1,13 @@
-/**
- * SPDX-License-Identifier: MIT
+/* SPDX-License-Identifier: MIT
+ *
+ * Usage:
+ *     * Setup a 'struct sclexer' and pass it to 'sclexer_init',
+ *       and the 'fpath' argument of 'sclexer_init' can be NULL.
+ *     * Give a file content to 'src' and 'src_siz' of 'struct sclexer',
+ *       If you want to read a file and get the content of it,
+ *       use 'sclexer_read_file'.
+ *     * Parse the 'src' by 'sclexer_get_tok' or just use 'sclexer_get_tokens'
+ *       to parse all content of 'src'.
  */
 #ifndef LIBSCLEXER_H
 #define LIBSCLEXER_H
@@ -59,13 +67,27 @@ struct sclexer {
 	bool enable_indent;
 	bool (*is_ident)(char c, bool begin);
 
+	/* Single line comments, such as ";" and "//",
+	 * so I think you will know what means of it.
+	 * (It won't be setup by 'sclexer_init')
+	 */
 	const char **comments;
 	size_t comments_count;
+
+	/* Like "~!@#$%^&*()-_+=" or setup else by yourself?
+	 * (It won't be setup by 'sclexer_init')
+	 */
 	const char **symbols;
 	size_t symbols_count;
+
+	/* Like "enum", "struct", "define",
+	 * or just call it "special ientifier"
+	 * (It won't be setup by 'sclexer_init')
+	 */
 	const char **keywords;
 	size_t keywords_count;
 
+	/* Preparing for parsing string */
 	const char *src;
 	size_t src_siz;
 
@@ -77,15 +99,25 @@ struct sclexer {
 
 bool sclexer_default_is_ident(char c, bool begin);
 
+/**
+ * Just copy the content of 'dst' to 'src' without any memory allocate.
+ * So, 'src' and 'dst' must be a correct memory.
+ */
 void sclexer_dup_tok(struct sclexer_tok *dst, struct sclexer_tok *src);
 
+/**
+ * @return: true when 'src' not end, otherwise false.
+ */
 bool sclexer_get_tok(struct sclexer *self,
 		struct sclexer_tok *tok);
 
 /**
  * Before calling this function, setup all options without '_xxx' in 'lexer'.
- * If you need read a file, use `sclexer_read_file`
+ * If you need read a file, use 'sclexer_read_file'
  * and pass the result to this function.
+ *
+ * @param self: initialized 'struct sclexer'
+ * @param fpath: NULL | file path
  */
 void sclexer_init(struct sclexer *self, const char *fpath);
 
@@ -93,11 +125,13 @@ const char *sclexer_kind_names(enum SCLEXER_TOK_KIND kind);
 
 size_t sclexer_get_tokens(struct sclexer *self, struct sclexer_tok **result);
 
-//TODO
 void sclexer_print_tok(struct sclexer *self, struct sclexer_tok *tok);
 
 /**
+ * Read file context from 'fpath' to 'result' and returns length of it.
+ *
  * @param result: store the file content, you need free by yourself.
+ * @return: length of 'result'.
  */
 size_t sclexer_read_file(char **result, const char *fpath);
 
