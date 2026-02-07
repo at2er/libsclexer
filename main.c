@@ -2,6 +2,7 @@
  * Kick your /dev/brain and /dev/ass. :)
  * Just for debug, don't care this shits.
  */
+#define SCLEXER_IMPL
 #include "sclexer.h"
 #include <stdlib.h>
 #include <string.h>
