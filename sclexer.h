@@ -197,9 +197,9 @@ size_t sclexer_read_file(char **result, const char *fpath);
 #define _SCLEXER_TOK_KIND_FMT_ARG(TOK) kind_names[(TOK)->kind]
 
 /* For public functions from `sclexer.h` */
-#define check(E) \
+#define _sclexer_check(E) \
 	if (!(E)) { \
-		_sclexer_eprintf(_SCLEXER_ERR_FMT"failed to check '%s'\n", \
+		_sclexer_eprintf(_SCLEXER_ERR_FMT"failed to _sclexer_check '%s'\n", \
 				_SCLEXER_ERR_FMT_ARG, #E); \
 	}
 
@@ -484,7 +484,7 @@ bool sclexer_default_is_ident(char c, bool begin)
 
 void sclexer_dup_tok(struct sclexer_tok *dst, struct sclexer_tok *src)
 {
-	check(dst && src);
+	_sclexer_check(dst && src);
 	memcpy(dst, src, sizeof(*src));
 }
 
@@ -492,8 +492,8 @@ bool sclexer_get_tok(struct sclexer *self,
 		struct sclexer_tok *tok)
 {
 	size_t readed = 0;
-	check(self && tok);
-	check(self->src && self->_cur);
+	_sclexer_check(self && tok);
+	_sclexer_check(self->src && self->_cur);
 
 	tok->src.begin = self->_cur;
 	tok->loc = self->_loc;
@@ -547,9 +547,9 @@ end:
 
 void sclexer_init(struct sclexer *self, const char *fpath)
 {
-	check(self)
-	check(self->src)
-	check(fpath)
+	_sclexer_check(self)
+	_sclexer_check(self->src)
+	_sclexer_check(fpath)
 	if (!self->comments
 			&& !self->symbols
 			&& !self->keywords) {
